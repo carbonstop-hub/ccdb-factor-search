@@ -37,79 +37,114 @@ If the CLI is not installed or no API Key is configured, tell the user to run th
 
 ---
 
-## Data retrieval
+## Workflow
 
-Search via the Carbonstop CLI:
+### Step 1 — Normalize the request
+
+Extract as many of these fields as possible from the user's request:
+- material / product / fuel / energy type
+- process or activity
+- lifecycle stage
+- geography / country / region
+- time period
+- unit requirements
+- industry context
+- whether the user wants 碳足迹因子 or 排放因子
+
+### Step 2 — Build search terms
+
+Create a ranked list and search iteratively:
 
 ```bash
 carbonstop search-factors --name "电力" --lang zh
 carbonstop search-factors --name "electricity" --lang en
+carbonstop search-factors --name "grid electricity" --lang en
 ```
+
+Example term expansion:
+- "聚酯切片" → "聚酯切片" → "PET切片" → "polyester chip" → "PET resin"
+- "外购电（华东电网）" → "外购电" → "区域电网电力" → "purchased electricity" → "grid electricity East China"
 
 Collect all candidates across rounds before ranking.
 
----
+### Step 3 — Evaluate suitability
 
-## What this skill must do
+Check each candidate on:
+- semantic object match
+- lifecycle stage match
+- region match
+- unit match
+- recency / source reliability
+- factor type (碳足迹 vs 排放)
 
-### 1. Parse the real search intent
-Identify from the request: material / process / activity, region, year, unit, use purpose, whether the user wants 碳足迹因子 or 排放因子.
+Reject candidates that are clearly about a different object, stage, or region.
 
-### 2. Search bilingually
-Always try: Chinese core term → Chinese synonym → English equivalent → English synonym.
+### Step 4 — Return the best factor
 
-### 3. Rank candidates instead of trusting the first hit
-Judge across 7 dimensions:
-- semantic fit (`name`, `description`, `specification`)
-- region fit (`countries`)
-- unit fit (`unit`)
-- applicability time (`applyYear` ~ `applyYearEnd`)
-- publication year (`year`)
-- authority (`institution`, `sourceLevel`)
-- factor-type fit (碳足迹因子 vs 排放因子)
+Explain: what was selected, why, what risks remain, what alternatives were considered, whether it can be used directly or only as reference.
 
-### 4. Be conservative
-Do not force a recommendation when evidence is weak. Prefer `not_suitable` or `api_unavailable` over a misleading confident answer.
+### If nothing suitable is found
 
-### 5. Explain the choice
-The final answer should explain: what was selected, why, what risks remain, what alternatives were considered, whether the result can be used directly or only as reference.
+Return all search terms attempted, why results were unsuitable, and what clarification would improve matching. Do not fabricate a recommendation.
 
 ---
 
-## Before vs after
+## Mandatory search policy
 
-### User asks
-> 帮我找中国最新全国电力因子。
+For non-trivial requests, do ALL of the following unless the user explicitly narrows scope:
+1. search with the strongest Chinese term
+2. search with at least one Chinese synonym or broader/narrower Chinese variant
+3. search with the strongest English equivalent
+4. search with at least one English synonym or alternative wording
+5. compare all high-scoring candidates across all runs before selecting a winner
 
-### Plain search might return
-- multiple electricity-related candidates, mixed carbon-footprint vs emission-factor results, unclear region/year/suitability
-
-### This skill returns
-- one recommended candidate, why it was selected, risk notes, alternatives considered, direct-use guidance
+Keep a search log.
 
 ---
 
-## Typical example prompts
+## Constraints to extract and preserve
 
-### Example 1 — latest China electricity factor
-> 查询最新的中国全国电力因子，单位最好是 kgCO2e/kWh。
+Always try to preserve these from the user request:
+- target object or activity
+- process / stage / scenario
+- geography / grid / country / region
+- unit
+- year / applicability period
+- source preference if the user implies it
 
-Expected: prioritize China electricity candidates, prefer recent applicable years, distinguish carbon footprint vs emission factor, return direct-use guidance.
+---
 
-### Example 2 — bilingual material lookup
-> 帮我找聚酯切片的碳因子，如果中文结果不好就切英文继续找。
+## Candidate selection hierarchy
 
-Expected: derive PET / polyester synonyms, search bilingually, compare candidates across rounds, return one recommended factor plus alternatives.
+Prefer candidates in this order:
+1. direct semantic match + matching region + matching unit
+2. direct semantic match + matching region + compatible unit
+3. direct semantic match + weaker region match + compatible unit
+4. broader parent-category fallback with explicit warning
 
-### Example 3 — conservative screening
-> 请帮我找原铝的排放因子，优先物理量单位，不要误选成按金额计算的因子。
+---
 
-Expected: reject or downgrade spend-based factors, prefer physical-unit candidates, explain why the chosen factor is safer.
+## Ranking dimensions
 
-### Example 4 — suitability review
-> 这个因子能不能直接用于正式报告？
+Judge candidates across 7 dimensions:
+1. semantic fit (`name`, `description`, `specification`)
+2. region fit (`countries`)
+3. unit fit (`unit`)
+4. applicability time (`applyYear` ~ `applyYearEnd`)
+5. publication year (`year`)
+6. authority (`institution`, `sourceLevel`)
+7. factor-type fit (碳足迹因子 vs 排放因子)
 
-Expected: explain whether it is direct-use / needs review / estimate-only / not suitable.
+---
+
+## Red flags
+
+Downgrade or reject candidates when:
+- country/region conflicts with the user requirement
+- unit is clearly incompatible with the intended use
+- the result refers to a different lifecycle stage or category
+- the result is too generic while a more specific candidate exists
+- the result is spend-based / monetary-unit when the user wanted physical-activity factors
 
 ---
 
@@ -142,14 +177,121 @@ For geo-sensitive factors, if region is missing, surface that as a risk.
 ### No spend-based mismatch
 If the user wants a physical activity factor, do not recommend spend-based / monetary-unit factors.
 
+### Be conservative
+Do not force a recommendation when evidence is weak. Prefer `not_suitable` or `api_unavailable` over a misleading confident answer.
+
 ---
 
-## Standard output example
+## Multi-round refinement
+
+If the first search set does not yield a reliable result:
+1. remove modifiers and test the core noun
+2. add process keyword
+3. add or remove geography keyword
+4. switch Chinese ↔ English
+5. broaden to parent category
+6. try common domain synonyms (see lexicon below)
+
+---
+
+## Domain lexicon
+
+Use this to expand search terms before or during iterative search.
+
+### Energy
+- 电力 → electricity, grid electricity, purchased electricity
+- 外购电 → purchased electricity, outsourced electricity, grid electricity
+- 电网电力 → grid electricity
+- 蒸汽 → steam
+- 外购蒸汽 → purchased steam, imported steam, steam
+- 天然气 → natural gas
+- 柴油 → diesel
+- 汽油 → gasoline, petrol
+- 煤 → coal
+
+### Materials
+- 聚酯切片 → polyester chip, PET chip, PET resin
+- PET树脂 → PET resin
+- 原铝 → primary aluminium, primary aluminum
+- 铝锭 → aluminium ingot, aluminum ingot
+- 钢材 → steel
+- 铜 → copper
+- 纸箱 → corrugated box, carton board, cardboard box
+- 塑料包装 → plastic packaging
+
+### Logistics / Transport
+- 公路运输 → road transport, trucking
+- 海运 → ocean freight, sea freight
+- 空运 → air freight
+- 铁路运输 → rail freight
+
+### Lifecycle / Scenario
+- cradle-to-gate → 从摇篮到大门, 原材料到出厂
+- gate-to-gate → 厂内生产阶段, 从门到门
+- 范畴3 → scope 3
+- 生产资料 → purchased goods, capital goods, upstream materials
+
+### Lexicon usage
+
+When the first query is weak:
+1. switch between Chinese and English equivalents
+2. try broader parent terms
+3. try more process-specific terms
+4. use lifecycle or scenario cues only when the user explicitly needs them
+
+---
+
+## Output template
+
+Use this structure for every result:
+
+```yaml
+推荐结果:
+  匹配等级: direct_match | close_match | fallback_generic | not_suitable
+  因子名称:
+  英文名称:
+  因子值:
+  单位:
+  适用地区:
+  适用年份开始:
+  适用年份结束:
+  发布年份:
+  来源机构:
+  来源说明:
+
+选择原因:
+  - 为什么它是当前最合适的结果
+  - 哪些字段与用户需求直接匹配
+  - 哪些字段只是近似匹配
+
+风险与注意事项:
+  - 地域风险
+  - 单位风险
+  - 生命周期/场景风险
+  - 数据是否加密
+
+检索路径:
+  - 中文词:
+  - 英文词:
+  - 调整过的词:
+
+候选备选:
+  - 候选 1:
+  - 候选 2:
+  - 候选 3:
+
+结论建议:
+  - 是否建议直接使用
+  - 是否建议用户补充信息后再查
+```
+
+### Concrete example
 
 ```yaml
 推荐结果:
   匹配等级: close_match
   因子名称: 电力
+  英文名称: Electricity
   因子值: 0.5777
   单位: kgCO2e/kWh
   适用地区: 中国
@@ -157,62 +299,74 @@ If the user wants a physical activity factor, do not recommend spend-based / mon
   适用年份结束: 2024
   发布年份: 2024
   来源机构: 生态环境部
-  来源级别: 国家排放因子
-  使用建议: 建议人工复核后使用
+  来源说明: 2024年全国电力平均碳足迹因子
 
 选择原因:
-  - 中国地区 + 最新年份 + kgCO2e 单位与用户需求一致
+  - 中国地区精确匹配
+  - 2024 最新适用年份
+  - kgCO2e 单位与碳足迹需求一致
+  - 生态环境部官方发布
 
 风险与注意事项:
   - 这是碳足迹因子，不等同于 CO2 排放因子
   - 若用于正式核算或核查，请先确认适用口径
+  - 全国平均因子，不区分区域电网
 
 候选备选:
   - 0.5306 | 2023 年全国电力平均 CO2 排放因子 | kgCO2e/kWh | 生态环境部
-  - 0.581  | 2022 年全国电网排放因子         | tCO2e/MWh  | 生态环境部
+  - 0.581  | 2022 年全国电网排放因子 | tCO2e/MWh | 生态环境部
+  - 0.2556 | 2023 年电力供应因子 | kgCO2e/kWh | 非洲（不匹配）
 
 检索路径:
   - 中文词: 电力
-  - 英文词: electricity, grid electricity
+  - 英文词: electricity, grid electricity, purchased electricity
 
-结论建议: 建议人工复核后使用
+结论建议:
+  - 建议人工复核后使用
+  - 如需更精确，请确认区域电网和具体年份
 ```
 
 ---
 
-## Key fields
+## Key fields reference
 
 | Field | Description |
 |-------|-------------|
 | `name` | 因子名称 |
 | `cValue` | 因子值 |
 | `unit` | 单位 (kgCO₂e/kWh, tCO₂e/t, etc.) |
-| `countries` | 适用地区 |
-| `applyYear` ~ `applyYearEnd` | 适用年份范围 |
-| `year` | 发布年份 |
+| `countries` | 适用国家/地区 |
+| `applyYear` | 适用年份开始 |
+| `applyYearEnd` | 适用年份结束 |
+| `year` | 数据发布年份 |
 | `institution` | 来源机构 |
-| `sourceLevel` | 来源级别 (国家/国际/行业) |
-| `source` | 来源说明 |
+| `sourceLevel` | 来源级别 (国家排放因子/国际排放因子/行业) |
+| `source` | 来源文献/文件说明 |
 | `description` | 描述 |
 | `specification` | 规格说明 |
 
----
-
-## Multi-round refinement
-
-If the first search set does not yield a reliable result:
-1. Remove modifiers, test the core noun
-2. Add process keyword
-3. Add or remove geography keyword
-4. Switch Chinese ↔ English
-5. Broaden to parent category
-6. Try common domain synonyms (see `references/domain-lexicon.md`)
+Note: `cValue` may be encrypted or unavailable for restricted data tiers.
 
 ---
 
-## References
+## Typical example prompts
 
-- `references/matching-strategy.md` — candidate ranking logic
-- `references/domain-lexicon.md` — Chinese/English term expansion
-- `references/output-template.md` — full output structure
-- `references/workflow.md` — step-by-step process
+### Example 1 — latest China electricity factor
+> 查询最新的中国全国电力因子，单位最好是 kgCO2e/kWh。
+
+Expected: prioritize China electricity candidates, prefer recent applicable years, distinguish carbon footprint vs emission factor, return direct-use guidance.
+
+### Example 2 — bilingual material lookup
+> 帮我找聚酯切片的碳因子，如果中文结果不好就切英文继续找。
+
+Expected: derive PET / polyester synonyms, search bilingually, compare candidates across rounds, return one recommended factor plus alternatives.
+
+### Example 3 — conservative screening
+> 请帮我找原铝的排放因子，优先物理量单位，不要误选成按金额计算的因子。
+
+Expected: reject or downgrade spend-based factors, prefer physical-unit candidates, explain why the chosen factor is safer.
+
+### Example 4 — suitability review
+> 这个因子能不能直接用于正式报告？
+
+Expected: explain whether it is direct-use / needs review / estimate-only / not suitable.

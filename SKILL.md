@@ -39,17 +39,13 @@ If the CLI is not installed or no API Key is configured, tell the user to run th
 
 ## Data retrieval
 
-Use the bundled search script. It executes the mandatory bilingual search policy and returns all collected candidates:
+Use the bundled search script. Provide Chinese and English search terms explicitly (use the domain lexicon below to expand). The script executes all searches and returns merged, deduplicated results:
 
 ```bash
-node scripts/search_ccdb.mjs "电力"
+node scripts/search_ccdb.mjs --zh "电力" --en "electricity" --en "grid electricity"
 ```
 
-The script handles:
-- Chinese core term + synonym search
-- English equivalent + synonym search
-- Automatic term expansion via domain lexicon
-- Deduplication
+Pass all search terms from your search strategy as `--zh` or `--en` arguments. The script handles execution and deduplication.
 
 If the script fails with authentication errors, tell the user to configure the CLI:
 
@@ -76,13 +72,20 @@ Extract as many of these fields as possible from the user's request:
 - industry context
 - whether the user wants 碳足迹因子 or 排放因子
 
-### Step 2 — Collect candidates
+### Step 2 — Build search terms and collect candidates
+
+Use the domain lexicon to expand the user's keyword into Chinese + English search terms, then run:
 
 ```bash
-node scripts/search_ccdb.mjs "<keyword>"
+node scripts/search_ccdb.mjs --zh "<核心词>" --zh "<同义词>" --en "<English>" --en "<synonym>"
 ```
 
-The script runs all required search rounds and returns merged JSON. It implements the mandatory search policy automatically.
+Example for 聚酯切片:
+```bash
+node scripts/search_ccdb.mjs --zh "聚酯切片" --zh "PET切片" --en "polyester chip" --en "PET resin"
+```
+
+The script executes all searches and returns merged, deduplicated JSON.
 
 ### Step 3 — Evaluate suitability
 

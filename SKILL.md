@@ -37,6 +37,31 @@ If the CLI is not installed or no API Key is configured, tell the user to run th
 
 ---
 
+## Data retrieval
+
+Use the bundled search script. It executes the mandatory bilingual search policy and returns all collected candidates:
+
+```bash
+node scripts/search_ccdb.mjs "电力"
+```
+
+The script handles:
+- Chinese core term + synonym search
+- English equivalent + synonym search
+- Automatic term expansion via domain lexicon
+- Deduplication
+
+If the script fails with authentication errors, tell the user to configure the CLI:
+
+```bash
+npm install -g @carbonstopper/cli
+carbonstop auth login --api-key <your-key>
+```
+
+Get an API Key at https://ccloud-d-test.carbonstop.com/.
+
+---
+
 ## Workflow
 
 ### Step 1 — Normalize the request
@@ -51,21 +76,13 @@ Extract as many of these fields as possible from the user's request:
 - industry context
 - whether the user wants 碳足迹因子 or 排放因子
 
-### Step 2 — Build search terms
-
-Create a ranked list and search iteratively:
+### Step 2 — Collect candidates
 
 ```bash
-carbonstop search-factors --name "电力" --lang zh
-carbonstop search-factors --name "electricity" --lang en
-carbonstop search-factors --name "grid electricity" --lang en
+node scripts/search_ccdb.mjs "<keyword>"
 ```
 
-Example term expansion:
-- "聚酯切片" → "聚酯切片" → "PET切片" → "polyester chip" → "PET resin"
-- "外购电（华东电网）" → "外购电" → "区域电网电力" → "purchased electricity" → "grid electricity East China"
-
-Collect all candidates across rounds before ranking.
+The script runs all required search rounds and returns merged JSON. It implements the mandatory search policy automatically.
 
 ### Step 3 — Evaluate suitability
 
@@ -86,19 +103,6 @@ Explain: what was selected, why, what risks remain, what alternatives were consi
 ### If nothing suitable is found
 
 Return all search terms attempted, why results were unsuitable, and what clarification would improve matching. Do not fabricate a recommendation.
-
----
-
-## Mandatory search policy
-
-For non-trivial requests, do ALL of the following unless the user explicitly narrows scope:
-1. search with the strongest Chinese term
-2. search with at least one Chinese synonym or broader/narrower Chinese variant
-3. search with the strongest English equivalent
-4. search with at least one English synonym or alternative wording
-5. compare all high-scoring candidates across all runs before selecting a winner
-
-Keep a search log.
 
 ---
 

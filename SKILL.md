@@ -39,13 +39,21 @@ If the CLI is not installed or no API Key is configured, tell the user to run th
 
 ## Data retrieval
 
-Use the bundled search script. Provide Chinese and English search terms explicitly (use the domain lexicon below to expand). The script executes all searches and returns merged, deduplicated results:
+Use the bundled script. Provide Chinese + English search terms via `--zh` / `--en`. The script runs all searches, retries on failure, and returns merged deduplicated JSON:
 
 ```bash
 node scripts/search_ccdb.mjs --zh "电力" --en "electricity" --en "grid electricity"
 ```
 
-Pass all search terms from your search strategy as `--zh` or `--en` arguments. The script handles execution and deduplication.
+The stderr output shows per-term results:
+```
+[search_ccdb] 3 term(s) → 30 unique / 30 raw
+  电力 [zh]: +10
+  electricity [en]: +10
+  grid electricity [en]: +10
+```
+
+If any terms show `FAIL`, check stderr for the error. The script will report auth errors and guide the user.
 
 If the script fails with authentication errors, tell the user to configure the CLI:
 
@@ -80,9 +88,11 @@ Use the domain lexicon to expand the user's keyword into Chinese + English searc
 node scripts/search_ccdb.mjs --zh "<核心词>" --zh "<同义词>" --en "<English>" --en "<synonym>"
 ```
 
+**Always pass ALL expanded terms in a single call.** Do not decide to stop early — the script handles execution and deduplication. Only skip a term if you are certain it is irrelevant.
+
 Example for 聚酯切片:
 ```bash
-node scripts/search_ccdb.mjs --zh "聚酯切片" --zh "PET切片" --en "polyester chip" --en "PET resin"
+node scripts/search_ccdb.mjs --zh "聚酯切片" --zh "PET切片" --en "polyester chip" --en "PET resin" --en "PET"
 ```
 
 The script executes all searches and returns merged, deduplicated JSON.
@@ -128,6 +138,14 @@ Prefer candidates in this order:
 2. direct semantic match + matching region + compatible unit
 3. direct semantic match + weaker region match + compatible unit
 4. broader parent-category fallback with explicit warning
+
+### Tie-break within the same tier
+
+When multiple candidates are at the same tier, break ties by:
+1. **Newer `applyYear`** → prefer the most up-to-date factor
+2. **Higher `sourceLevel`** → prefer 国家排放因子 over 行业/国际排放因子
+3. **Official `institution`** → prefer government bodies (生态环境部, IPCC, IEA, EPA) over private/unknown sources
+4. If still tied → list both as candidates and let the user choose
 
 ---
 
@@ -232,6 +250,32 @@ Use this to expand search terms before or during iterative search.
 - 空运 → air freight
 - 铁路运输 → rail freight
 
+### Chemicals
+- 甲醇 → methanol
+- 乙烯 → ethylene
+- 丙烯 → propylene
+- 聚丙烯 → polypropylene, PP
+- 聚乙烯 → polyethylene, PE
+- 尿素 → urea
+- 烧碱 → caustic soda, sodium hydroxide
+
+### Building materials
+- 水泥 → cement
+- 玻璃 → glass
+- 石灰 → lime
+
+### Agriculture
+- 大米 → rice
+- 小麦 → wheat
+- 猪肉 → pork
+- 牛肉 → beef
+- 棉花 → cotton
+
+### Waste
+- 填埋 → landfill
+- 焚烧 → incineration
+- 废水处理 → wastewater treatment
+
 ### Lifecycle / Scenario
 - cradle-to-gate → 从摇篮到大门, 原材料到出厂
 - gate-to-gate → 厂内生产阶段, 从门到门
@@ -275,7 +319,7 @@ Use this structure for every result:
   - 地域风险
   - 单位风险
   - 生命周期/场景风险
-  - 数据是否加密
+  - 数据是否加密（见下方 cValue 加密处理规则）
 
 检索路径:
   - 中文词:
@@ -332,6 +376,19 @@ Use this structure for every result:
   - 建议人工复核后使用
   - 如需更精确，请确认区域电网和具体年份
 ```
+
+---
+
+---
+
+## Encrypted / unavailable cValue handling
+
+When `cValue` is empty, null, or contains encrypted/garbled data:
+
+- Output: `因子值: [加密/仅元数据可见]`
+- Do NOT skip the factor — it may still be useful for matching by name, region, unit, year
+- Clearly explain: "该因子需要更高权限才能查看具体数值；当前可确认名称/地区/单位/年份匹配，建议升级数据权限或联系数据提供方获取完整值"
+- Do not imply the factor doesn't exist just because cValue is hidden
 
 ---
 

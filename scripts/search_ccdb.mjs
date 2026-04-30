@@ -3,7 +3,8 @@ import { execSync } from "node:child_process";
 
 // -------- Sanitize --------
 function sanitize(kw) {
-  return kw.replace(/["'$`\\;|&!]/g, "").trim();
+  // Keep only letters, numbers, spaces, and common separators
+  return kw.replace(/[^\p{L}\p{N}\s\-_./,]/gu, "").trim();
 }
 
 // -------- Parse args --------

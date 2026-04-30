@@ -23,6 +23,32 @@ Use this lexicon to expand search terms before or during iterative search.
 - 纸箱 → corrugated box, carton board, cardboard box
 - 塑料包装 → plastic packaging
 
+## Chemicals
+- 甲醇 → methanol
+- 乙烯 → ethylene
+- 丙烯 → propylene
+- 聚丙烯 → polypropylene, PP
+- 聚乙烯 → polyethylene, PE
+- 尿素 → urea
+- 烧碱 → caustic soda, sodium hydroxide
+
+## Building materials
+- 水泥 → cement
+- 玻璃 → glass
+- 石灰 → lime
+
+## Agriculture
+- 大米 → rice
+- 小麦 → wheat
+- 猪肉 → pork
+- 牛肉 → beef
+- 棉花 → cotton
+
+## Waste
+- 填埋 → landfill
+- 焚烧 → incineration
+- 废水处理 → wastewater treatment
+
 ## Logistics / Transport
 - 公路运输 → road transport, trucking
 - 海运 → ocean freight, sea freight

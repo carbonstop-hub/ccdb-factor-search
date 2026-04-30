@@ -3,13 +3,16 @@
 ## 0.1.6
 
 - Replaced Python script with Carbonstop CLI (`carbonstop search-factors`)
-- Removed direct HTTP fallback — all requests through official CLI transport
-- Removed hardcoded API paths and sign prefixes from SKILL.md
+- Added `scripts/search_ccdb.mjs` — deterministic bilingual search with retry, dedup, stderr summary
+- Merged all references into SKILL.md for single-file ClawHub release
+- Added tie-break rules (applyYear → sourceLevel → institution)
+- Added encrypted cValue handling standard output
+- Expanded domain lexicon with Chemicals, Building Materials, Agriculture, Waste
+- Structured evals with expected match classes and constraints
+- Removed hardcoded API paths, sign prefixes, and publishing draft files
 - Removed `scripts/query_ccdb.py`, `references/api-contract.md`
-- Removed publishing draft files (CLAWHUB_*.md, PUBLISHING_NOTES.md)
-- Simplified to single data path via CLI with API Key auth
 
-## 0.1.7
+## 0.1.5
 
 - switched runtime guidance from public direct HTTP examples to CLI transport path
 - added API key guidance for public usage

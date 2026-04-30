@@ -29,6 +29,14 @@ Prefer candidates in this order:
 3. direct semantic match + weaker region match + compatible unit
 4. broader parent-category fallback with explicit warning
 
+### Tie-break within the same tier
+
+When multiple candidates are at the same tier, break ties by:
+1. **Newer `applyYear`** → prefer the most up-to-date factor
+2. **Higher `sourceLevel`** → prefer 国家排放因子 over 行业/国际排放因子
+3. **Official `institution`** → prefer government bodies (生态环境部, IPCC, IEA, EPA) over private/unknown sources
+4. If still tied → list both as candidates and let the user choose
+
 ## Red flags
 
 Downgrade or reject candidates when:

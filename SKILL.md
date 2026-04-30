@@ -31,7 +31,7 @@ npm install -g @carbonstopper/cli
 carbonstop auth login --api-key <your-key>
 ```
 
-**No API Key?** Register at https://ccloud-d-test.carbonstop.com/ to create one.
+**No API Key?** Register at https://ccloud.carbonstop.com/ to create one.
 
 If the CLI is not installed or no API Key is configured, tell the user to run the commands above. Do not attempt to work around missing auth.
 
@@ -62,7 +62,7 @@ npm install -g @carbonstopper/cli
 carbonstop auth login --api-key <your-key>
 ```
 
-Get an API Key at https://ccloud-d-test.carbonstop.com/.
+Get an API Key at https://ccloud.carbonstop.com/.
 
 ---
 

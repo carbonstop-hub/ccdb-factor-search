@@ -44,7 +44,7 @@ function search(keyword, lang) {
       return data.rows || [];
     } catch (err) {
       if (err.message?.includes("API Key") || err.message?.includes("auth")) {
-        console.error("[search_ccdb] Auth required. Get a key at https://ccloud-d-test.carbonstop.com/ then:");
+        console.error("[search_ccdb] Auth required. Get a key at https://ccloud.carbonstop.com/ then:");
         console.error("  npm install -g @carbonstopper/cli");
         console.error("  carbonstop auth login --api-key <your-key>");
         process.exit(2);

@@ -24,7 +24,7 @@ This skill searches in **Chinese + English**, compares candidates, filters weak 
 
 ---
 
-## Prerequisites
+## Prerequisites (recommended)
 
 ```bash
 npm install -g @carbonstopper/cli
@@ -33,17 +33,20 @@ carbonstop auth login --api-key <your-key>
 
 **No API Key?** Register at https://ccloud.carbonstop.com/ to create one.
 
-If the CLI is not installed or no API Key is configured, tell the user to run the commands above. Do not attempt to work around missing auth.
-
 ---
 
 ## Data retrieval
 
-Use the bundled script. Provide Chinese + English search terms via `--zh` / `--en`. The script runs all searches, retries on failure, and returns merged deduplicated JSON:
+Use the bundled script. Provide Chinese + English search terms via `--zh` / `--en`:
 
 ```bash
 node scripts/search_ccdb.mjs --zh "电力" --en "electricity" --en "grid electricity"
 ```
+
+The script chooses the best available path:
+
+1. **CLI (preferred)** — if `carbonstop` CLI is installed and authenticated
+2. **Direct API (fallback)** — if CLI is unavailable or auth fails. Server-side key verification applies: if the key check is off, requests go through; if on, requests are rejected.
 
 The stderr output shows per-term results:
 ```
@@ -53,9 +56,9 @@ The stderr output shows per-term results:
   grid electricity [en]: +10
 ```
 
-If any terms show `FAIL`, check stderr for the error. The script will report auth errors and guide the user.
+If any terms show `FAIL`, check stderr for the error.
 
-If the script fails with authentication errors, tell the user to configure the CLI:
+If the script fails with authentication errors from both paths, tell the user:
 
 ```bash
 npm install -g @carbonstopper/cli
